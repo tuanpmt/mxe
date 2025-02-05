@@ -1,6 +1,6 @@
 {
   "name": "mxe",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Markdown Export Tool - Convert Markdown to PDF, DOCX, HTML and download web articles",
   "main": "dist/index.js",
   "bin": {

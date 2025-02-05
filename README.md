@@ -10,6 +10,16 @@ A command-line tool for converting Markdown files to PDF, DOCX, HTML formats and
 - Custom styling support
 - URL to Markdown conversion
 
+## AI Tools Integration
+
+MXE is particularly useful when working with modern AI tools:
+
+- Use with GitHub Copilot for easy markdown editing and collaboration
+- Convert web articles to markdown for better AI tools interaction
+- Maintain content in markdown format for optimal AI processing
+- Export to other formats (PDF, DOCX) only when needed
+- Perfect for AI-assisted documentation workflows
+
 ## Installation
 
 ```bash

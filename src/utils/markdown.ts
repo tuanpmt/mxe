@@ -45,18 +45,29 @@ export function cleanupMarkdown(markdown: string): string {
     markdown
       // Remove HTML comments
       .replace(/<!--[\s\S]*?-->/g, '')
+      // Fix code blocks
+      .replace(/```\s+```/g, '')
+      // Fix multiple code block markers
+      .replace(/`{4,}/g, '```')
       // Remove empty lines between sections
       .replace(/\n{3,}/g, '\n\n')
       // Remove lines that only contain whitespace
       .replace(/^\s+$/gm, '')
-      // Remove social media links and share buttons text
-      .replace(/(?:Share|Tweet|Pin).*$/gm, '')
+      // Remove social media and share buttons
+      .replace(/(?:Share|Tweet|Pin|Follow).*$/gm, '')
       // Remove common unnecessary elements
       .replace(/^Related Articles.*$/gm, '')
       .replace(/^Tags:.*$/gm, '')
       .replace(/^Author:.*$/gm, '')
+      // Fix broken lists
+      .replace(/(?:\n\n[-*+])/g, '\n-')
       // Remove multiple sequential spaces
       .replace(/ +/g, ' ')
+      // Fix heading spaces
+      .replace(/####\s*/g, '#### ')
+      .replace(/###\s*/g, '### ')
+      .replace(/##\s*/g, '## ')
+      .replace(/#\s*/g, '# ')
       // Clean up remaining whitespace
       .trim()
   );

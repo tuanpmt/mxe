@@ -5,8 +5,8 @@ import { ClipboardConverter } from '../converters/clipboard';
 import { DocxConverter } from '../converters/docx';
 import { HtmlConverter } from '../converters/html';
 import { PDFConverter } from '../converters/pdf';
-import { downloadAndConvert } from '../utils/downloader';
-import { generateSafeFilename, isURL } from '../utils/url';
+import { isURL } from '../utils/url';
+import { download } from './download';
 
 interface ConvertOptions {
   format?: 'pdf' | 'docx' | 'html' | 'clipboard';
@@ -21,16 +21,10 @@ export const convert = async (input: string, options: ConvertOptions) => {
     let inputFilename = '';
 
     if (isURL(input)) {
-      const safeFilename = generateSafeFilename(input);
-      workingDir = path.join(process.cwd(), safeFilename);
-      await fs.mkdir(workingDir, { recursive: true });
-
-      const { markdown } = await downloadAndConvert(input, workingDir);
-      content = markdown;
-
-      // Save markdown file with safe filename
-      inputFilename = `${safeFilename}.md`;
-      await fs.writeFile(path.join(workingDir, inputFilename), content);
+      const result = await download(input, { output: options.output });
+      content = result.content;
+      workingDir = result.workingDir;
+      inputFilename = result.inputFilename;
     } else {
       content = await fs.readFile(input, 'utf-8');
       workingDir = path.dirname(path.resolve(input));

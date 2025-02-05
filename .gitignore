@@ -1,0 +1,44 @@
+# Dependencies
+node_modules
+.pnpm-store
+yarn.lock
+package-lock.json
+
+# Build outputs
+dist
+build
+.next
+out
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE and Editor files
+.idea
+.vscode
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+*.html
+*.pdf
+*.docx
+*.png
+dir.json
+
+# Coverage and test
+coverage
+.nyc_output
+
+# Fonts
+!src/fonts/
+!src/fonts/lato/

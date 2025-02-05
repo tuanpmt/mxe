@@ -14,7 +14,7 @@
     "test": "jest",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,json,md}\"",
-    "dev": "NODE_ENV=development tsx watch src/cli.ts",
+    "dev": "tsc -w",
     "dev:debug": "tsx --inspect src/cli.ts"
   },
   "keywords": [

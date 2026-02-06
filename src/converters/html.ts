@@ -3,19 +3,10 @@ import * as fs from 'fs/promises';
 import hljs from 'highlight.js';
 import { marked } from 'marked';
 import path from 'path';
-import { BaseConverter, ConverterOptions } from './base';
-
-interface MarkedCode {
-  text: string;
-  lang?: string;
-  escaped?: boolean;
-}
-
-interface MarkedImage {
-  href: string;
-  title: string | null;
-  text: string;
-}
+import { processMermaidInMarkdown, getMermaidScript, isMermaidCliAvailable } from '../utils/mermaid';
+import { extractHeadings, generateTocHtml, getTocStyles, addHeadingIds } from '../utils/toc';
+import { getSimpleGoogleFontsUrl, getFontFamily } from '../utils/fonts';
+import { BaseConverter, ConverterOptions, Heading } from './base';
 
 interface Image {
   href: string;
@@ -23,10 +14,12 @@ interface Image {
   text: string;
   type?: string;
   raw?: string;
+  tokens?: unknown[];
 }
 
 export class HtmlConverter extends BaseConverter {
   protected renderer: typeof marked.Renderer.prototype;
+  protected headings: Heading[] = [];
 
   protected async imageToBase64(imagePath: string): Promise<string> {
     try {
@@ -43,13 +36,11 @@ export class HtmlConverter extends BaseConverter {
 
   private async getFontBase64(fontName: string): Promise<string> {
     try {
-      // Use path.resolve to get absolute path from source directory
       const fontPath = path.resolve(__dirname, '..', 'fonts', 'lato', fontName);
       const fontBuffer = await fs.readFile(fontPath);
       return fontBuffer.toString('base64');
     } catch (error) {
       console.warn(`Warning: Could not load font ${fontName}: ${error}`);
-      // Return empty string on error to allow fallback fonts
       return '';
     }
   }
@@ -60,7 +51,7 @@ export class HtmlConverter extends BaseConverter {
 
     const originalImage = this.renderer.image.bind(this.renderer);
 
-    // Fix image renderer signature to match marked's Image type
+    // Image renderer - convert local images to base64
     this.renderer.image = (options: Image): string => {
       let { href, title, text } = options;
 
@@ -75,21 +66,33 @@ export class HtmlConverter extends BaseConverter {
           console.warn(`Warning: Could not load image ${href}:`, error);
         }
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return originalImage({
         ...options,
         href,
         type: 'image',
         raw: `![${text}](${href}${title ? ` "${title}"` : ''})`,
-      });
+      } as any);
     };
 
-    // Configure code highlighting
-    this.renderer.code = ({ text, lang }: MarkedCode): string => {
+    // Code highlighting with better styling
+    this.renderer.code = ({ text, lang }): string => {
+      // Handle mermaid - will be processed separately
+      if (lang === 'mermaid') {
+        return `<div class="mermaid">\n${text}\n</div>`;
+      }
+
       const validLanguage = lang && hljs.getLanguage(lang) ? lang : 'plaintext';
       const highlighted = hljs.highlight(text, {
         language: validLanguage,
       }).value;
-      return `<pre><code class="hljs language-${validLanguage}">${highlighted}</code></pre>`;
+
+      return `
+        <div class="code-block">
+          ${lang ? `<div class="code-lang">${lang}</div>` : ''}
+          <pre><code class="hljs language-${validLanguage}">${highlighted}</code></pre>
+        </div>
+      `;
     };
 
     marked.setOptions({
@@ -106,19 +109,40 @@ export class HtmlConverter extends BaseConverter {
   }
 
   protected async generateHtml(markdown: string): Promise<string> {
-    const tokens = marked.lexer(markdown);
+    // Extract headings for TOC and bookmarks
+    this.headings = extractHeadings(markdown, this.options.tocDepth || 3);
+
+    // Process mermaid diagrams if mmdc is available
+    let processedMarkdown = markdown;
+    const useMmdc = isMermaidCliAvailable();
+    
+    if (useMmdc) {
+      processedMarkdown = await processMermaidInMarkdown(markdown, this.options.mermaid);
+    }
+
+    // Parse markdown
+    const tokens = marked.lexer(processedMarkdown);
     const processedTokens = [];
 
     for (const token of tokens) {
       if (token.type === 'paragraph') {
-        const text = token.text;
-        token.text = await this.processImages(text);
+        token.text = await this.processImages(token.text);
       }
       processedTokens.push(token);
     }
 
-    const html = marked.parser(processedTokens);
-    return this.wrapHtml(html);
+    let html = marked.parser(processedTokens);
+
+    // Add heading IDs for anchor links
+    html = addHeadingIds(html, this.headings);
+
+    // Generate TOC if enabled
+    let tocHtml = '';
+    if (this.options.toc) {
+      tocHtml = generateTocHtml(this.headings);
+    }
+
+    return this.wrapHtml(html, tocHtml, !useMmdc);
   }
 
   protected async processImages(text: string): Promise<string> {
@@ -137,109 +161,210 @@ export class HtmlConverter extends BaseConverter {
     return result;
   }
 
-  protected wrapHtml(content: string): string {
-    const latoRegular = this.getFontBase64('Lato-Regular.ttf');
-    const latoBold = this.getFontBase64('Lato-Bold.ttf');
-    const latoItalic = this.getFontBase64('Lato-Italic.ttf');
+  protected getHighlightStyles(): string {
+    // GitHub-style syntax highlighting
+    return `
+      /* Code block container */
+      .code-block {
+        position: relative;
+        margin: 1em 0;
+      }
+
+      .code-lang {
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 2px 8px;
+        font-size: 11px;
+        color: #586069;
+        background: #f1f3f5;
+        border-radius: 0 6px 0 6px;
+        font-family: -apple-system, system-ui, sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      pre {
+        background: #f6f8fa;
+        border-radius: 6px;
+        padding: 16px;
+        overflow-x: auto;
+        font-size: 13px;
+        line-height: 1.5;
+        font-family: 'SF Mono', 'Fira Code', 'Monaco', 'Menlo', monospace;
+        border: 1px solid #e1e4e8;
+      }
+
+      code {
+        font-family: 'SF Mono', 'Fira Code', 'Monaco', 'Menlo', monospace;
+      }
+
+      :not(pre) > code {
+        font-size: 85%;
+        padding: 0.2em 0.4em;
+        background: rgba(27,31,35,0.05);
+        border-radius: 3px;
+        color: #e01e5a;
+      }
+
+      /* GitHub-style syntax colors */
+      .hljs { color: #24292e; }
+      .hljs-comment, .hljs-quote { color: #6a737d; font-style: italic; }
+      .hljs-keyword, .hljs-selector-tag { color: #d73a49; font-weight: 600; }
+      .hljs-string, .hljs-attr { color: #032f62; }
+      .hljs-number, .hljs-literal { color: #005cc5; }
+      .hljs-function, .hljs-title { color: #6f42c1; }
+      .hljs-built_in, .hljs-type { color: #005cc5; }
+      .hljs-variable, .hljs-template-variable { color: #e36209; }
+      .hljs-attribute { color: #005cc5; }
+      .hljs-tag { color: #22863a; }
+      .hljs-name { color: #22863a; }
+      .hljs-selector-class, .hljs-selector-id { color: #6f42c1; }
+      .hljs-addition { color: #22863a; background: #f0fff4; }
+      .hljs-deletion { color: #b31d28; background: #ffeef0; }
+      .hljs-emphasis { font-style: italic; }
+      .hljs-strong { font-weight: bold; }
+    `;
+  }
+
+  protected getMermaidStyles(): string {
+    return `
+      .mermaid-diagram, .mermaid {
+        display: flex;
+        justify-content: center;
+        margin: 1.5em 0;
+        page-break-inside: avoid;
+      }
+
+      .mermaid-diagram svg, .mermaid svg {
+        max-width: 100%;
+        height: auto;
+      }
+    `;
+  }
+
+  protected wrapHtml(content: string, tocHtml: string = '', includeMermaidScript: boolean = false): string {
+    const mermaidScript = includeMermaidScript ? getMermaidScript(this.options.mermaid) : '';
+    
+    // Get font settings
+    const bodyFont = this.options.font || 'inter';
+    const monoFont = this.options.monoFont || 'jetbrains-mono';
+    const fontsToLoad = [bodyFont, monoFont].filter((f, i, arr) => arr.indexOf(f) === i);
+    const googleFontsUrl = getSimpleGoogleFontsUrl(fontsToLoad);
+    const bodyFontFamily = getFontFamily(bodyFont);
+    const monoFontFamily = getFontFamily(monoFont);
 
     return `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="UTF-8">
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="${googleFontsUrl}" rel="stylesheet">
           <style>
-            @font-face {
-              font-family: 'Lato';
-              src: url(data:font/ttf;base64,${latoRegular}) format('truetype');
-              font-weight: normal;
-              font-style: normal;
-            }
-            
-            @font-face {
-              font-family: 'Lato';
-              src: url(data:font/ttf;base64,${latoBold}) format('truetype');
-              font-weight: bold;
-              font-style: normal;
-            }
-            
-            @font-face {
-              font-family: 'Lato';
-              src: url(data:font/ttf;base64,${latoItalic}) format('truetype');
-              font-weight: normal;
-              font-style: italic;
+            * {
+              box-sizing: border-box;
             }
 
             body {
-              font-family: 'Lato', -apple-system, system-ui, sans-serif;
-              max-width: 95%;  /* Wider content area */
+              font-family: ${bodyFontFamily};
+              max-width: 95%;
               margin: 0 auto;
-              padding: 0;      /* Remove padding, will be handled by PDF margins */
-              line-height: 1.5;
+              padding: 0;
+              line-height: 1.6;
+              color: #24292e;
             }
-            
-            pre {
+
+            h1, h2, h3, h4, h5, h6 {
+              margin-top: 1.5em;
+              margin-bottom: 0.5em;
+              font-weight: 600;
+              line-height: 1.25;
+            }
+
+            h1 { font-size: 2em; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }
+            h2 { font-size: 1.5em; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }
+            h3 { font-size: 1.25em; }
+            h4 { font-size: 1em; }
+
+            p { margin: 1em 0; }
+
+            a { color: #0366d6; text-decoration: none; }
+            a:hover { text-decoration: underline; }
+
+            blockquote {
+              margin: 1em 0;
+              padding: 0.5em 1em;
+              border-left: 4px solid #dfe2e5;
+              color: #6a737d;
               background: #f6f8fa;
-              border-radius: 6px;
-              padding: 16px;
-              overflow: auto;
-              font-size: 85%;
-              line-height: 1.45;
-              font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
             }
-            
-            code {
-              font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-              font-size: 85%;
-              padding: 0.2em 0.4em;
-              background: rgba(27,31,35,0.05);
-              border-radius: 3px;
-            }
-            
-            .hljs-keyword { color: #d73a49; }
-            .hljs-string { color: #032f62; }
-            .hljs-number { color: #005cc5; }
-            .hljs-function { color: #6f42c1; }
-            .hljs-comment { color: #6a737d; }
-            .hljs-title { color: #6f42c1; }
-            
+
+            ul, ol { padding-left: 2em; margin: 1em 0; }
+            li { margin: 0.25em 0; }
+
             img {
               display: block;
               max-width: 100%;
               width: auto;
               height: auto;
-              margin: 1em auto;
+              margin: 1.5em auto;
               border-radius: 4px;
-              object-fit: contain;
             }
             
             table {
               border-collapse: collapse;
               width: 100%;
               margin: 1em 0;
-            }
-            
-            table, th, td {
-              border: 1px solid #dfe2e5;
+              page-break-inside: avoid;
             }
             
             th, td {
+              border: 1px solid #dfe2e5;
               padding: 8px 12px;
               text-align: left;
             }
             
             th {
               background-color: #f6f8fa;
-              font-weight: bold;
+              font-weight: 600;
             }
 
             tr:nth-child(even) {
-              background-color: #f8f8f8;
+              background-color: #f8f9fa;
             }
-            
+
+            hr {
+              border: none;
+              border-top: 1px solid #eaecef;
+              margin: 2em 0;
+            }
+
+            /* Code blocks with custom mono font */
+            pre, code {
+              font-family: ${monoFontFamily};
+            }
+
+            /* Task lists */
+            .task-list-item {
+              list-style-type: none;
+              margin-left: -1.5em;
+            }
+
+            .task-list-item input {
+              margin-right: 0.5em;
+            }
+
+            ${this.getHighlightStyles()}
+            ${this.getMermaidStyles()}
+            ${this.options.toc ? getTocStyles() : ''}
             ${this.options.style ? fsSync.readFileSync(this.options.style, 'utf-8') : ''}
           </style>
+          ${mermaidScript}
         </head>
         <body>
+          ${tocHtml}
           ${content}
         </body>
       </html>
@@ -259,5 +384,9 @@ export class HtmlConverter extends BaseConverter {
 
     await fs.writeFile(output, html);
     console.log(`HTML created: ${output}`);
+  }
+
+  getHeadings(): Heading[] {
+    return this.headings;
   }
 }

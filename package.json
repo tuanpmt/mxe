@@ -1,7 +1,7 @@
 {
   "name": "mxe",
-  "version": "1.0.1",
-  "description": "Markdown Export Tool - Convert Markdown to PDF, DOCX, HTML and download web articles",
+  "version": "2.0.0",
+  "description": "Markdown Export Tool - Convert Markdown to PDF/DOCX/HTML with Mermaid, TOC, and bookmarks support",
   "main": "dist/index.js",
   "bin": {
     "mxe": "./dist/cli.js"
@@ -24,16 +24,14 @@
     "html",
     "converter",
     "cli",
+    "mermaid",
+    "syntax-highlighting",
+    "toc",
+    "bookmarks",
     "article-downloader",
     "web-scraper",
     "github-copilot",
-    "ai-tools",
-    "llm",
-    "llama",
-    "chatgpt",
-    "ai-assistant",
-    "ai-workflow",
-    "markdown-ai"
+    "ai-tools"
   ],
   "author": "",
   "license": "ISC",
@@ -52,6 +50,7 @@
     "markdown-it-table": "^4.1.1",
     "marked": "^15.0.6",
     "node-fetch": "^3.3.0",
+    "pdf-lib": "^1.17.1",
     "puppeteer": "^24.1.1",
     "sharp": "^0.33.5",
     "turndown": "^7.1.2"

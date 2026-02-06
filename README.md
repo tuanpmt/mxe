@@ -1,29 +1,30 @@
-# Markdown Export Tool (MXE)
+# MXE - Markdown Export Tool 📄
 
-A command-line tool for converting Markdown files to PDF, DOCX, HTML formats and downloading web articles as Markdown.
+A powerful CLI for converting Markdown to PDF, DOCX, and HTML with Mermaid diagrams, syntax highlighting, and custom fonts.
 
 ## Features
 
-- Convert Markdown to PDF, DOCX, or HTML
-- Copy Markdown to clipboard
-- Download web articles as Markdown with image assets
-- Custom styling support
-- URL to Markdown conversion
-
-## AI Tools Integration
-
-MXE is particularly useful when working with modern AI tools:
-
-- Use with GitHub Copilot for easy markdown editing and collaboration
-- Convert web articles to markdown for better AI tools interaction
-- Maintain content in markdown format for optimal AI processing
-- Export to other formats (PDF, DOCX) only when needed
-- Perfect for AI-assisted documentation workflows
+- 📄 **Multiple formats**: PDF, DOCX, HTML, Clipboard
+- 🎨 **Mermaid diagrams**: Flowcharts, sequence, class diagrams with themes
+- ✏️ **Hand-drawn style**: Sketch-like diagrams
+- 🔤 **Custom fonts**: Inter, Roboto, Fira Code, JetBrains Mono, and more
+- 🌈 **Syntax highlighting**: GitHub-style code blocks
+- 📑 **Table of Contents**: Auto-generated TOC
+- 🔖 **PDF Bookmarks**: Navigate large documents
+- 🌐 **URL support**: Download web articles as Markdown
+- 🖼️ **Image embedding**: Local images embedded in output
 
 ## Installation
 
 ```bash
 npm install -g mxe
+```
+
+### Dependencies
+
+For Mermaid diagram support, install mermaid-cli:
+```bash
+npm install -g @mermaid-js/mermaid-cli
 ```
 
 ## Usage
@@ -32,92 +33,111 @@ npm install -g mxe
 mxe <input> [options]
 ```
 
-Input can be:
-
-- A local Markdown file
-- A URL to download and convert
-- Multiple files using glob patterns
-
-### Examples
+### Basic Examples
 
 ```bash
-# Convert Markdown to PDF (default)
+# Convert to PDF (default)
 mxe document.md
 
 # Convert to DOCX
-mxe document.md --format docx
+mxe document.md -f docx
 
 # Convert to HTML
-mxe document.md --format html
+mxe document.md -f html
 
-# Copy to clipboard
-mxe document.md --format clipboard
+# Download URL and convert
+mxe https://example.com/article -f pdf
+```
 
-# Download article from URL and convert
-mxe https://example.com/article --format pdf
+### Advanced Examples
 
-# Specify output directory
-mxe document.md --output ./exports
+```bash
+# Full-featured PDF with TOC
+mxe document.md --toc --font roboto --mono-font fira-code
 
-# Convert with custom styling
-mxe document.md --style custom.css
+# Hand-drawn Mermaid diagrams
+mxe document.md --hand-draw --mermaid-theme forest
+
+# Custom output directory
+mxe document.md -o ./output
+
+# With custom CSS
+mxe document.md -s custom.css
 ```
 
 ## Options
 
-- `-f, --format <type>`: Output format (pdf, docx, html, clipboard)
-- `-s, --style <file>`: Custom CSS file for styling
-- `-o, --output <dir>`: Specify output directory
+| Option | Description |
+|--------|-------------|
+| `-f, --format <type>` | Output format: `pdf`, `docx`, `html`, `clipboard` |
+| `-o, --output <dir>` | Output directory |
+| `-s, --style <file>` | Custom CSS file |
+| `--toc` | Generate table of contents |
+| `--toc-depth <n>` | TOC heading depth (default: 3) |
+| `--no-bookmarks` | Disable PDF bookmarks |
 
-## Development
+### Font Options
 
-### Prerequisites
+| Option | Description |
+|--------|-------------|
+| `--font <family>` | Body font family |
+| `--mono-font <family>` | Code font family |
 
-- Node.js 18 or higher
-- npm 8 or higher
+**Available fonts:**
 
-### Setup
+| Font | Type | Description |
+|------|------|-------------|
+| `inter` | Sans | Modern, readable (default) |
+| `roboto` | Sans | Google's clean font |
+| `lato` | Sans | Friendly, warm |
+| `opensans` | Sans | Neutral, legible |
+| `source-sans` | Sans | Adobe's UI font |
+| `merriweather` | Serif | Elegant reading |
+| `jetbrains-mono` | Mono | Developer favorite (default) |
+| `fira-code` | Mono | Ligatures support |
+| `source-code` | Mono | Adobe's code font |
 
-1. Clone the repository
+### Mermaid Options
 
-```bash
-git clone https://github.com/tuanpmt/mxe.git
-cd mxe
+| Option | Description |
+|--------|-------------|
+| `--mermaid-theme <theme>` | Theme: `default`, `forest`, `dark`, `neutral`, `base` |
+| `--mermaid-layout <layout>` | Layout: `dagre`, `elk` |
+| `--hand-draw` | Hand-drawn/sketch style |
+
+## Examples
+
+### Mermaid Diagram
+
+````markdown
+```mermaid
+flowchart LR
+    A[Markdown] --> B{MXE}
+    B --> C[PDF]
+    B --> D[DOCX]
+    B --> E[HTML]
 ```
+````
 
-2. Install dependencies
+### Code Block
 
-```bash
-npm install
+````markdown
+```javascript
+const hello = (name) => {
+  console.log(`Hello, ${name}!`);
+};
 ```
+````
 
-3. Build the project
+## AI Tools Integration
 
-```bash
-npm run build
-```
+MXE is designed to work seamlessly with AI assistants:
 
-4. Run in development mode
-
-```bash
-npm run dev
-```
-
-### Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## Useful Links
-
-- [Report Issues](https://github.com/tuanpmt/mxe/issues)
-- [Markdown Guide](https://www.markdownguide.org/)
-- [Pandoc Documentation](https://pandoc.org/MANUAL.html)
-- [GitHub Repository](https://github.com/tuanpmt/mxe)
+- Convert AI-generated content to professional PDFs
+- Download research articles for AI processing
+- Maintain documentation in Markdown format
+- Export to various formats on demand
 
 ## License
 
-MIT © 2025 Tuan PM <tuanpm@live.com>
+ISC

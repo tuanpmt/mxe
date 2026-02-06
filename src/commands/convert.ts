@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { BaseConverter } from '../converters/base';
+import { BaseConverter, ConverterOptions, MermaidTheme, MermaidLayout, FontFamily } from '../converters/base';
 import { ClipboardConverter } from '../converters/clipboard';
 import { DocxConverter } from '../converters/docx';
 import { HtmlConverter } from '../converters/html';
@@ -12,6 +12,25 @@ interface ConvertOptions {
   format?: 'pdf' | 'docx' | 'html' | 'clipboard';
   style?: string;
   output?: string;
+  
+  // TOC
+  toc?: boolean;
+  tocDepth?: number;
+  
+  // Bookmarks
+  bookmarks?: boolean;
+  
+  // Mermaid
+  mermaidTheme?: MermaidTheme;
+  mermaidLayout?: MermaidLayout;
+  handDraw?: boolean;
+  
+  // Syntax highlighting
+  highlightTheme?: string;
+  
+  // Fonts
+  font?: FontFamily;
+  monoFont?: FontFamily;
 }
 
 export const convert = async (input: string, options: ConvertOptions) => {
@@ -34,20 +53,37 @@ export const convert = async (input: string, options: ConvertOptions) => {
     // Change working directory
     process.chdir(workingDir);
 
+    // Build converter options
+    const converterOptions: ConverterOptions = {
+      style: options.style,
+      output: options.output,
+      toc: options.toc,
+      tocDepth: options.tocDepth,
+      bookmarks: options.bookmarks !== false, // Default true
+      mermaid: {
+        theme: options.mermaidTheme || 'default',
+        layout: options.mermaidLayout || 'dagre',
+        handDraw: options.handDraw || false,
+      },
+      highlightTheme: options.highlightTheme,
+      font: options.font,
+      monoFont: options.monoFont,
+    };
+
     let converter: BaseConverter;
 
     switch (options.format) {
       case 'docx':
-        converter = new DocxConverter(options);
+        converter = new DocxConverter(converterOptions);
         break;
       case 'html':
-        converter = new HtmlConverter(options);
+        converter = new HtmlConverter(converterOptions);
         break;
       case 'clipboard':
-        converter = new ClipboardConverter(options);
+        converter = new ClipboardConverter(converterOptions);
         break;
       default:
-        converter = new PDFConverter(options);
+        converter = new PDFConverter(converterOptions);
     }
 
     await converter.convert(inputFilename);

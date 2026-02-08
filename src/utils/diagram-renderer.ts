@@ -72,21 +72,35 @@ async function renderDiagram(
     } else if (type === 'wavedrom') {
       const svg = await page.evaluate((src: string, idx: number) => {
         try {
-          const parsed = JSON.parse(src);
           // @ts-ignore
           const WaveDrom = window.WaveDrom;
           if (!WaveDrom) return '<div style="color:red">WaveDrom not loaded</div>';
           
-          // Create container
+          // Parse source - WaveDrom accepts JS object notation
+          let parsed;
+          try {
+            parsed = JSON.parse(src);
+          } catch {
+            // Try eval for JS object notation (unquoted keys)
+            parsed = eval('(' + src + ')');
+          }
+          
+          // Create container with script tag (WaveDrom ProcessAll method)
           const container = document.createElement('div');
-          container.id = `wavedrom-${idx}`;
-          container.innerHTML = `<script type="WaveDrom">${src}</script>`;
+          container.id = `wavedrom-container-${idx}`;
+          
+          // Add script tag with WaveDrom source
+          const script = document.createElement('script');
+          script.type = 'WaveDrom';
+          script.id = `wv-${idx}`;
+          script.textContent = JSON.stringify(parsed);
+          container.appendChild(script);
           document.body.appendChild(container);
           
-          // Render
+          // Render using ProcessAll
           WaveDrom.ProcessAll();
           
-          // Get SVG
+          // Get the rendered SVG (it replaces the script tag)
           const svgEl = container.querySelector('svg');
           const result = svgEl ? svgEl.outerHTML : '<div style="color:red">WaveDrom render failed</div>';
           
@@ -127,15 +141,26 @@ export async function renderAllDiagrams(
     const page = await browser.newPage();
 
     // Build mermaid config
-    const mermaidConfig = {
+    const useElk = mermaidOpts.layout === 'elk';
+    const mermaidConfig: Record<string, unknown> = {
       startOnLoad: false,
       theme: mermaidOpts.theme || 'default',
       look: mermaidOpts.handDraw ? 'handDrawn' : 'classic',
-      layout: mermaidOpts.layout || 'dagre',
     };
+    
+    // ELK layout config
+    if (useElk) {
+      mermaidConfig.layout = 'elk';
+      mermaidConfig.elk = {
+        mergeEdges: true,
+        nodePlacementStrategy: 'SIMPLE',
+      };
+      mermaidConfig.flowchart = {
+        defaultRenderer: 'elk',
+      };
+    }
 
-    // Determine which scripts to load
-    const useElk = mermaidOpts.layout === 'elk';
+    // Determine which scripts to load (useElk already defined above)
     
     // Load page with Mermaid and WaveDrom
     // Use mermaid 11 ESM for elk and handDrawn support
@@ -178,8 +203,19 @@ export async function renderAllDiagrams(
     // Render each diagram
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i];
+      let source = block.source;
+      
+      // Inject ELK directive for flowcharts/graphs when ELK is enabled
+      if (useElk && block.type === 'mermaid') {
+        const trimmed = source.trim();
+        const isFlowchart = trimmed.startsWith('flowchart') || trimmed.startsWith('graph');
+        if (isFlowchart && !source.includes('defaultRenderer')) {
+          source = `%%{init: {"flowchart": {"defaultRenderer": "elk"}}}%%\n${source}`;
+        }
+      }
+      
       console.log(`  Rendering ${block.type} diagram ${i + 1}/${blocks.length}...`);
-      const svg = await renderDiagram(page, block.type, block.source, i);
+      const svg = await renderDiagram(page, block.type, source, i);
       results.set(block.placeholder, svg);
     }
   } finally {

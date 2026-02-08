@@ -62,7 +62,7 @@ export const convert = async (input: string, options: ConvertOptions) => {
       bookmarks: options.bookmarks !== false, // Default true
       mermaid: {
         theme: options.mermaidTheme || 'default',
-        layout: options.mermaidLayout || 'dagre',
+        layout: options.mermaidLayout || 'elk',  // ELK is the new default
         handDraw: options.handDraw || false,
       },
       highlightTheme: options.highlightTheme,

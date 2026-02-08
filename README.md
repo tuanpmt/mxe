@@ -1,12 +1,12 @@
 # MXE - Markdown Export Tool 📄
 
-A powerful CLI for converting Markdown to PDF, DOCX, and HTML with Mermaid diagrams, syntax highlighting, and custom fonts.
+A powerful CLI for converting Markdown to PDF, DOCX, and HTML with diagrams, syntax highlighting, and custom fonts.
 
 ## Features
 
 - 📄 **Multiple formats**: PDF, DOCX, HTML, Clipboard
-- 🎨 **Mermaid diagrams**: Flowcharts, sequence, class diagrams with ELK layout (default)
-- 📊 **WaveDrom diagrams**: Digital timing diagrams, register definitions
+- 🎨 **Mermaid v11.12**: 18+ diagram types with ELK layout
+- 📊 **WaveDrom**: Digital timing diagrams, register definitions
 - ✏️ **Hand-drawn style**: Sketch-like diagrams
 - 🔤 **Custom fonts**: Inter, Roboto, Fira Code, JetBrains Mono, and more
 - 🌈 **Syntax highlighting**: GitHub-style code blocks
@@ -21,12 +21,7 @@ A powerful CLI for converting Markdown to PDF, DOCX, and HTML with Mermaid diagr
 npm install -g mxe
 ```
 
-### Dependencies
-
-For Mermaid diagram support, install mermaid-cli:
-```bash
-npm install -g @mermaid-js/mermaid-cli
-```
+That's it! No additional dependencies required. MXE uses Puppeteer to render diagrams server-side.
 
 ## Usage
 
@@ -39,6 +34,9 @@ mxe <input> [options]
 ```bash
 # Convert to PDF (default)
 mxe document.md
+
+# With table of contents
+mxe document.md --toc
 
 # Convert to DOCX
 mxe document.md -f docx
@@ -53,14 +51,14 @@ mxe https://example.com/article -f pdf
 ### Advanced Examples
 
 ```bash
-# Full-featured PDF with TOC
+# Full-featured PDF with custom fonts
 mxe document.md --toc --font roboto --mono-font fira-code
 
 # Hand-drawn Mermaid diagrams
 mxe document.md --hand-draw --mermaid-theme forest
 
-# Custom output directory
-mxe document.md -o ./output
+# Custom output path
+mxe document.md -o ./output/my-doc.pdf
 
 # With custom CSS
 mxe document.md -s custom.css
@@ -71,7 +69,7 @@ mxe document.md -s custom.css
 | Option | Description |
 |--------|-------------|
 | `-f, --format <type>` | Output format: `pdf`, `docx`, `html`, `clipboard` |
-| `-o, --output <dir>` | Output directory |
+| `-o, --output <path>` | Output file path |
 | `-s, --style <file>` | Custom CSS file |
 | `--toc` | Generate table of contents |
 | `--toc-depth <n>` | TOC heading depth (default: 3) |
@@ -98,39 +96,83 @@ mxe document.md -s custom.css
 | `fira-code` | Mono | Ligatures support |
 | `source-code` | Mono | Adobe's code font |
 
-### Mermaid Options
+### Diagram Options
 
 | Option | Description |
 |--------|-------------|
 | `--mermaid-theme <theme>` | Theme: `default`, `forest`, `dark`, `neutral`, `base` |
-| `--mermaid-layout <layout>` | Layout: `dagre`, `elk` |
+| `--mermaid-layout <layout>` | Layout: `elk` (default), `dagre` |
 | `--hand-draw` | Hand-drawn/sketch style |
+
+## Supported Diagrams
+
+### Mermaid (v11.12)
+
+MXE supports all 18+ Mermaid diagram types:
+
+| Diagram | Description |
+|---------|-------------|
+| Flowchart | Process flows, decision trees |
+| Sequence | Interaction between components |
+| Class | Object-oriented design |
+| State | State machines |
+| ER Diagram | Database relationships |
+| Gantt | Project timelines |
+| Pie Chart | Data distribution |
+| Git Graph | Branch visualization |
+| Mindmap | Hierarchical ideas |
+| Timeline | Historical events |
+| Quadrant | Priority matrices |
+| Sankey | Flow quantities |
+| XY Chart | Bar/line charts |
+| Block | Block diagrams |
+| Requirement | Requirements tracing |
+| User Journey | User experience flows |
+| C4 | Software architecture |
+| ZenUML | Sequence (alternative) |
+
+### WaveDrom
+
+Digital timing diagrams and register definitions for hardware documentation.
 
 ## Examples
 
-### Mermaid Diagram
+### Flowchart with ELK Layout
 
 ````markdown
 ```mermaid
-flowchart LR
-    A[Markdown] --> B{MXE}
-    B --> C[PDF]
-    B --> D[DOCX]
-    B --> E[HTML]
+flowchart TB
+    A[Input] --> B{Process}
+    B -->|Yes| C[Output 1]
+    B -->|No| D[Output 2]
 ```
 ````
 
-### Code Block
+### Sequence Diagram
 
 ````markdown
-```javascript
-const hello = (name) => {
-  console.log(`Hello, ${name}!`);
-};
+```mermaid
+sequenceDiagram
+    autonumber
+    Alice->>Bob: Hello
+    Bob-->>Alice: Hi there!
 ```
 ````
 
-### WaveDrom Timing Diagram
+### Mindmap
+
+````markdown
+```mermaid
+mindmap
+    root((Project))
+        Planning
+        Development
+        Testing
+        Deployment
+```
+````
+
+### WaveDrom Timing
 
 ````markdown
 ```wavedrom
@@ -144,7 +186,7 @@ const hello = (name) => {
 ```
 ````
 
-### WaveDrom Register Definition
+### WaveDrom Register
 
 ````markdown
 ```wavedrom
@@ -153,9 +195,18 @@ const hello = (name) => {
     { "name": "DATA", "bits": 8, "attr": "RW" },
     { "name": "STATUS", "bits": 4, "attr": "RO" },
     { "name": "reserved", "bits": 4, "type": 1 }
-  ],
-  "config": { "hspace": 600 }
+  ]
 }
+```
+````
+
+### Code Block
+
+````markdown
+```typescript
+const greet = (name: string): void => {
+  console.log(`Hello, ${name}!`);
+};
 ```
 ````
 
@@ -164,9 +215,25 @@ const hello = (name) => {
 MXE is designed to work seamlessly with AI assistants:
 
 - Convert AI-generated content to professional PDFs
-- Download research articles for AI processing
+- Download research articles for AI processing  
 - Maintain documentation in Markdown format
 - Export to various formats on demand
+
+## Changelog
+
+### v2.1.2
+- Default to ELK layout for Mermaid diagrams
+- Better automatic node positioning
+
+### v2.1.0
+- Added WaveDrom support (timing diagrams, registers)
+- Inline SVG rendering (no external dependencies)
+
+### v2.0.0
+- Mermaid v11.12 with all diagram types
+- Custom font support
+- PDF bookmarks and TOC
+- Hand-drawn diagram style
 
 ## License
 

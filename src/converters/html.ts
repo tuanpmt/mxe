@@ -5,7 +5,7 @@ import { marked } from 'marked';
 import path from 'path';
 import { extractHeadings, generateTocHtml, getTocStyles, addHeadingIds } from '../utils/toc';
 import { getSimpleGoogleFontsUrl, getFontFamily } from '../utils/fonts';
-import { processDiagrams } from '../utils/diagram-renderer';
+import { processDiagrams, RenderOptions } from '../utils/diagram-renderer';
 import { BaseConverter, ConverterOptions, Heading } from './base';
 
 interface Image {
@@ -111,7 +111,10 @@ export class HtmlConverter extends BaseConverter {
     this.headings = extractHeadings(markdown, this.options.tocDepth || 3);
 
     // Process all diagrams (Mermaid, WaveDrom) - renders to inline SVG
-    const processedMarkdown = await processDiagrams(markdown);
+    const renderOptions: RenderOptions = {
+      mermaid: this.options.mermaid,
+    };
+    const processedMarkdown = await processDiagrams(markdown, renderOptions);
 
     // Parse markdown
     const tokens = marked.lexer(processedMarkdown);

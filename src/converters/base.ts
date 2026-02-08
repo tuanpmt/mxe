@@ -48,7 +48,7 @@ export abstract class BaseConverter {
       bookmarks: true,
       mermaid: {
         theme: 'default',
-        layout: 'dagre',
+        layout: 'elk',
         handDraw: false,
       },
       highlightTheme: 'github',

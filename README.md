@@ -5,7 +5,7 @@ A powerful CLI for converting Markdown to PDF, DOCX, and HTML with Mermaid diagr
 ## Features
 
 - 📄 **Multiple formats**: PDF, DOCX, HTML, Clipboard
-- 🎨 **Mermaid diagrams**: Flowcharts, sequence, class diagrams with themes
+- 🎨 **Mermaid diagrams**: Flowcharts, sequence, class diagrams with ELK layout (default)
 - 📊 **WaveDrom diagrams**: Digital timing diagrams, register definitions
 - ✏️ **Hand-drawn style**: Sketch-like diagrams
 - 🔤 **Custom fonts**: Inter, Roboto, Fira Code, JetBrains Mono, and more

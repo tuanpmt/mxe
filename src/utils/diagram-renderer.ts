@@ -4,11 +4,16 @@
  */
 
 import puppeteer, { Page } from 'puppeteer';
+import { MermaidOptions } from '../converters/base';
 
 export interface DiagramBlock {
   type: 'mermaid' | 'wavedrom';
   source: string;
   placeholder: string;
+}
+
+export interface RenderOptions {
+  mermaid?: MermaidOptions;
 }
 
 /**
@@ -104,10 +109,14 @@ async function renderDiagram(
 /**
  * Render all diagram blocks to SVG
  */
-export async function renderAllDiagrams(blocks: DiagramBlock[]): Promise<Map<string, string>> {
+export async function renderAllDiagrams(
+  blocks: DiagramBlock[],
+  options?: RenderOptions
+): Promise<Map<string, string>> {
   if (blocks.length === 0) return new Map();
 
   const results = new Map<string, string>();
+  const mermaidOpts = options?.mermaid || {};
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -117,27 +126,54 @@ export async function renderAllDiagrams(blocks: DiagramBlock[]): Promise<Map<str
   try {
     const page = await browser.newPage();
 
+    // Build mermaid config
+    const mermaidConfig = {
+      startOnLoad: false,
+      theme: mermaidOpts.theme || 'default',
+      look: mermaidOpts.handDraw ? 'handDrawn' : 'classic',
+      layout: mermaidOpts.layout || 'dagre',
+    };
+
+    // Determine which scripts to load
+    const useElk = mermaidOpts.layout === 'elk';
+    
     // Load page with Mermaid and WaveDrom
+    // Use mermaid 11 ESM for elk and handDrawn support
     await page.setContent(`
       <!DOCTYPE html>
       <html>
         <head>
-          <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
           <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/3.5.0/skins/default.js"></script>
           <script src="https://cdnjs.cloudflare.com/ajax/libs/wavedrom/3.5.0/wavedrom.min.js"></script>
-          <script>
-            mermaid.initialize({ startOnLoad: false, theme: 'default' });
+          <script type="module">
+            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+            ${useElk ? `
+            import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0/dist/mermaid-layout-elk.esm.min.mjs';
+            mermaid.registerLayoutLoaders(elkLayouts);
+            ` : ''}
+            
+            const config = ${JSON.stringify(mermaidConfig)};
+            mermaid.initialize(config);
+            
+            // Expose mermaid to window for rendering
+            window.mermaid = mermaid;
+            window.mermaidReady = true;
           </script>
         </head>
         <body></body>
       </html>
     `, { waitUntil: 'networkidle0' });
 
-    // Wait for libraries to load
+    // Wait for libraries to load (ESM modules load async)
     await page.waitForFunction(() => {
       // @ts-ignore
-      return typeof window.mermaid !== 'undefined' && typeof window.WaveDrom !== 'undefined';
-    }, { timeout: 10000 });
+      return window.mermaidReady === true && typeof window.WaveDrom !== 'undefined';
+    }, { timeout: 20000 });
+
+    // Extra wait for ELK to fully register
+    if (useElk) {
+      await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 2000)));
+    }
 
     // Render each diagram
     for (let i = 0; i < blocks.length; i++) {
@@ -156,13 +192,16 @@ export async function renderAllDiagrams(blocks: DiagramBlock[]): Promise<Map<str
 /**
  * Process markdown and render all diagrams inline
  */
-export async function processDiagrams(markdown: string): Promise<string> {
+export async function processDiagrams(
+  markdown: string,
+  options?: RenderOptions
+): Promise<string> {
   const { markdown: processed, blocks } = extractDiagramBlocks(markdown);
 
   if (blocks.length === 0) return markdown;
 
   console.log(`Processing ${blocks.length} diagram(s)...`);
-  const renderedDiagrams = await renderAllDiagrams(blocks);
+  const renderedDiagrams = await renderAllDiagrams(blocks, options);
 
   // Replace placeholders with rendered SVGs
   let result = processed;

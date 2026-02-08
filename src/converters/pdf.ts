@@ -13,9 +13,17 @@ interface PDFOutlineItem {
 export class PDFConverter extends HtmlConverter {
   async convert(input: string): Promise<void> {
     const inputDir = path.dirname(path.resolve(input));
-    const output = this.options.output
-      ? path.join(this.options.output, path.basename(input, '.md') + '.pdf')
-      : input.replace(/\.md$/, '.pdf');
+    let output: string;
+    if (this.options.output) {
+      // If output ends with .pdf, use it directly; otherwise treat as directory
+      if (this.options.output.endsWith('.pdf')) {
+        output = this.options.output;
+      } else {
+        output = path.join(this.options.output, path.basename(input, '.md') + '.pdf');
+      }
+    } else {
+      output = input.replace(/\.md$/, '.pdf');
+    }
 
     process.chdir(inputDir);
 
@@ -35,11 +43,11 @@ export class PDFConverter extends HtmlConverter {
       timeout: 60000,
     });
 
-    // Wait for any mermaid diagrams to render
+    // Diagrams are pre-rendered to inline SVG, just wait for images to load
     await page.evaluate(() => {
       return new Promise<void>((resolve) => {
-        // Wait a bit for mermaid to initialize
-        setTimeout(resolve, 1000);
+        // Short wait for any remaining rendering
+        setTimeout(resolve, 500);
       });
     });
 

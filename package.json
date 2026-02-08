@@ -1,10 +1,10 @@
 {
   "name": "mxe",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Markdown Export Tool - Convert Markdown to PDF/DOCX/HTML with Mermaid, TOC, and bookmarks support",
   "main": "dist/index.js",
   "bin": {
-    "mxe": "./dist/cli.js"
+    "mxe": "dist/cli.js"
   },
   "scripts": {
     "copy-fonts": "mkdir -p dist/fonts && cp -r src/fonts dist/",
@@ -49,11 +49,13 @@
     "markdown-it-link-attributes": "^4.0.1",
     "markdown-it-table": "^4.1.1",
     "marked": "^15.0.6",
+    "mermaid": "^11.12.2",
     "node-fetch": "^3.3.0",
     "pdf-lib": "^1.17.1",
     "puppeteer": "^24.1.1",
     "sharp": "^0.33.5",
-    "turndown": "^7.1.2"
+    "turndown": "^7.1.2",
+    "wavedrom": "^3.5.0"
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.7",

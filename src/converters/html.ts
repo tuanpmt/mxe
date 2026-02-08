@@ -3,9 +3,9 @@ import * as fs from 'fs/promises';
 import hljs from 'highlight.js';
 import { marked } from 'marked';
 import path from 'path';
-import { processMermaidInMarkdown, getMermaidScript, isMermaidCliAvailable } from '../utils/mermaid';
 import { extractHeadings, generateTocHtml, getTocStyles, addHeadingIds } from '../utils/toc';
 import { getSimpleGoogleFontsUrl, getFontFamily } from '../utils/fonts';
+import { processDiagrams } from '../utils/diagram-renderer';
 import { BaseConverter, ConverterOptions, Heading } from './base';
 
 interface Image {
@@ -77,10 +77,8 @@ export class HtmlConverter extends BaseConverter {
 
     // Code highlighting with better styling
     this.renderer.code = ({ text, lang }): string => {
-      // Handle mermaid - will be processed separately
-      if (lang === 'mermaid') {
-        return `<div class="mermaid">\n${text}\n</div>`;
-      }
+      // Mermaid and WaveDrom are pre-processed and replaced before this runs
+      // So we don't need special handling here
 
       const validLanguage = lang && hljs.getLanguage(lang) ? lang : 'plaintext';
       const highlighted = hljs.highlight(text, {
@@ -112,13 +110,8 @@ export class HtmlConverter extends BaseConverter {
     // Extract headings for TOC and bookmarks
     this.headings = extractHeadings(markdown, this.options.tocDepth || 3);
 
-    // Process mermaid diagrams if mmdc is available
-    let processedMarkdown = markdown;
-    const useMmdc = isMermaidCliAvailable();
-    
-    if (useMmdc) {
-      processedMarkdown = await processMermaidInMarkdown(markdown, this.options.mermaid);
-    }
+    // Process all diagrams (Mermaid, WaveDrom) - renders to inline SVG
+    const processedMarkdown = await processDiagrams(markdown);
 
     // Parse markdown
     const tokens = marked.lexer(processedMarkdown);
@@ -142,7 +135,7 @@ export class HtmlConverter extends BaseConverter {
       tocHtml = generateTocHtml(this.headings);
     }
 
-    return this.wrapHtml(html, tocHtml, !useMmdc);
+    return this.wrapHtml(html, tocHtml);
   }
 
   protected async processImages(text: string): Promise<string> {
@@ -227,24 +220,26 @@ export class HtmlConverter extends BaseConverter {
     `;
   }
 
-  protected getMermaidStyles(): string {
+  protected getDiagramStyles(): string {
     return `
-      .mermaid-diagram, .mermaid {
+      /* Diagram styles (Mermaid, WaveDrom, etc.) */
+      .diagram {
         display: flex;
         justify-content: center;
         margin: 1.5em 0;
         page-break-inside: avoid;
+        overflow-x: auto;
       }
 
-      .mermaid-diagram svg, .mermaid svg {
+      .diagram svg {
         max-width: 100%;
         height: auto;
       }
     `;
   }
 
-  protected wrapHtml(content: string, tocHtml: string = '', includeMermaidScript: boolean = false): string {
-    const mermaidScript = includeMermaidScript ? getMermaidScript(this.options.mermaid) : '';
+  protected wrapHtml(content: string, tocHtml: string = ''): string {
+    // Diagrams are pre-rendered to inline SVG, no scripts needed
     
     // Get font settings
     const bodyFont = this.options.font || 'inter';
@@ -357,11 +352,10 @@ export class HtmlConverter extends BaseConverter {
             }
 
             ${this.getHighlightStyles()}
-            ${this.getMermaidStyles()}
+            ${this.getDiagramStyles()}
             ${this.options.toc ? getTocStyles() : ''}
             ${this.options.style ? fsSync.readFileSync(this.options.style, 'utf-8') : ''}
           </style>
-          ${mermaidScript}
         </head>
         <body>
           ${tocHtml}
@@ -373,9 +367,17 @@ export class HtmlConverter extends BaseConverter {
 
   async convert(input: string): Promise<void> {
     const inputDir = path.dirname(path.resolve(input));
-    const output = this.options.output
-      ? path.join(this.options.output, path.basename(input, '.md') + '.html')
-      : input.replace(/\.md$/, '.html');
+    let output: string;
+    if (this.options.output) {
+      // If output ends with .html, use it directly; otherwise treat as directory
+      if (this.options.output.endsWith('.html')) {
+        output = this.options.output;
+      } else {
+        output = path.join(this.options.output, path.basename(input, '.md') + '.html');
+      }
+    } else {
+      output = input.replace(/\.md$/, '.html');
+    }
 
     process.chdir(inputDir);
 

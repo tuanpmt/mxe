@@ -6,6 +6,7 @@ A powerful CLI for converting Markdown to PDF, DOCX, and HTML with Mermaid diagr
 
 - 📄 **Multiple formats**: PDF, DOCX, HTML, Clipboard
 - 🎨 **Mermaid diagrams**: Flowcharts, sequence, class diagrams with themes
+- 📊 **WaveDrom diagrams**: Digital timing diagrams, register definitions
 - ✏️ **Hand-drawn style**: Sketch-like diagrams
 - 🔤 **Custom fonts**: Inter, Roboto, Fira Code, JetBrains Mono, and more
 - 🌈 **Syntax highlighting**: GitHub-style code blocks
@@ -126,6 +127,35 @@ flowchart LR
 const hello = (name) => {
   console.log(`Hello, ${name}!`);
 };
+```
+````
+
+### WaveDrom Timing Diagram
+
+````markdown
+```wavedrom
+{
+  "signal": [
+    { "name": "clk", "wave": "P........" },
+    { "name": "data", "wave": "x.345678x", "data": ["D0", "D1", "D2", "D3", "D4", "D5"] },
+    { "name": "enable", "wave": "0.1.....0" }
+  ]
+}
+```
+````
+
+### WaveDrom Register Definition
+
+````markdown
+```wavedrom
+{
+  "reg": [
+    { "name": "DATA", "bits": 8, "attr": "RW" },
+    { "name": "STATUS", "bits": 4, "attr": "RO" },
+    { "name": "reserved", "bits": 4, "type": 1 }
+  ],
+  "config": { "hspace": 600 }
+}
 ```
 ````
 

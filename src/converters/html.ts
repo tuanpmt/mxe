@@ -371,12 +371,12 @@ export class HtmlConverter extends BaseConverter {
     if (this.options.output) {
       // If output ends with .html, use it directly; otherwise treat as directory
       if (this.options.output.endsWith('.html')) {
-        output = this.options.output;
+        output = path.resolve(this.options.output);
       } else {
-        output = path.join(this.options.output, path.basename(input, '.md') + '.html');
+        output = path.resolve(this.options.output, path.basename(input, '.md') + '.html');
       }
     } else {
-      output = input.replace(/\.md$/, '.html');
+      output = path.resolve(input.replace(/\.md$/, '.html'));
     }
 
     process.chdir(inputDir);

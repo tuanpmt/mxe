@@ -1,6 +1,6 @@
 {
   "name": "mxe",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Markdown Export Tool - Convert Markdown to PDF/DOCX/HTML with Mermaid, TOC, and bookmarks support",
   "main": "dist/index.js",
   "bin": {

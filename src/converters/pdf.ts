@@ -17,12 +17,12 @@ export class PDFConverter extends HtmlConverter {
     if (this.options.output) {
       // If output ends with .pdf, use it directly; otherwise treat as directory
       if (this.options.output.endsWith('.pdf')) {
-        output = this.options.output;
+        output = path.resolve(this.options.output);
       } else {
-        output = path.join(this.options.output, path.basename(input, '.md') + '.pdf');
+        output = path.resolve(this.options.output, path.basename(input, '.md') + '.pdf');
       }
     } else {
-      output = input.replace(/\.md$/, '.pdf');
+      output = path.resolve(input.replace(/\.md$/, '.pdf'));
     }
 
     process.chdir(inputDir);
